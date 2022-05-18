@@ -209,6 +209,20 @@ pub mod lexer {
             Ok(res)
         }
 
+        pub fn skip_chars(&mut self, amount: usize) -> io::Result<()> {
+            if (self.position + amount) > self.input.len() {
+                return io::Result::Err(io::Error::new(io::ErrorKind::Other,
+                                       String::from(
+                                           format!(
+                                               "Skipping {} chars would exceed the length of the input!",
+                                               amount
+                                            )
+                                       )));
+
+            }
+            Ok(())
+        }
+
         pub fn next_token(&mut self) -> io::Result<Token> {
             self.skip_whitespace()?;
             let res = match self.chr {
@@ -227,8 +241,14 @@ pub mod lexer {
 
                 // operators
                 '=' => match self.peek() {
-                    Ok('!') => Ok(Token::DoesntEqual),
-                    Ok('=') => Ok(Token::Equals),
+                    Ok('!') => {
+                        self.skip_chars(2)?;
+                        Ok(Token::DoesntEqual)
+                    },
+                    Ok('=') => {
+                        self.skip_chars(2)?;
+                        Ok(Token::Equals)
+                    },
                     _       => Ok(Token::Assign),
                 },
 
