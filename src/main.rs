@@ -1,6 +1,7 @@
 use lexer::Lexer;
 
 fn main() {
+    /*
     let input = String::from("{}[,;.]");
     let mut lexer = Lexer::new(input);
     while let Ok(c) = lexer.next_token() {
@@ -10,6 +11,13 @@ fn main() {
     let input2 = String::from("}}}}}]");
     let mut lexer2 = Lexer::new(input2);
     while let Ok(c) = lexer2.next_token() {
+        println!("c: {:?}", c);
+    }*/
+
+    let input3 = String::from(r#"
+        ]\t"#);
+    let mut lexer3 = Lexer::new(input3);
+    while let Ok(c) = lexer3.next_token() {
         println!("c: {:?}", c);
     }
 }
@@ -63,6 +71,10 @@ pub mod lexer {
 
     impl Lexer {
         pub fn new(source: String) -> Self {
+            let source = source
+                .replace("\n", " ")
+                .replace("\r\n", " ");
+
             let input = source.chars().collect::<Vec<char>>();
             let mut slf = Self { 
                 input,
@@ -110,10 +122,18 @@ pub mod lexer {
         }
 
         fn is_ascii_whitespace(chr: char) -> bool {
-            chr == '\t' || chr == ' '
+            chr == '\t' || chr == ' ' || chr == '\n'
+        }
+
+        fn skip_whitespace(&mut self) -> io::Result<()> {
+            while Self::is_ascii_whitespace(self.chr) {
+                self.read_char()?;
+            }
+            Ok(())
         }
 
         pub fn parse_identifier(&mut self) -> io::Result<String> {
+            self.skip_whitespace()?;
             let start = self.position;
 
             let mut i = 0;
@@ -129,14 +149,11 @@ pub mod lexer {
                 .iter()
                 .collect::<String>();
 
-            Ok(result)
-        }
-
-        pub fn skip_whitespace(&mut self) -> io::Result<()> {
-            while Self::is_ascii_whitespace(self.chr) {
-                self.read_char()?;
+            if (self.position - start) == 0 {
+                return io::Result::Err(io::Error::new(io::ErrorKind::Other,
+                                       String::from("Empty identifier")));
             }
-            Ok(())
+            Ok(result)
         }
 
         pub fn next_token(&mut self) -> io::Result<Token> {
@@ -147,6 +164,7 @@ pub mod lexer {
                     let num = self.chr.to_digit(10).unwrap();
                     Ok(Token::Int(num))
                 },
+                '\0' => Ok(Token::EOF),
                 // parenthesis
                 '(' => Ok(Token::LParen),
                 ')' => Ok(Token::RParen),
@@ -200,6 +218,49 @@ pub mod lexer {
             let mut lexer = Lexer::new(source);
             while let Ok(t) = lexer.next_token() {
                 let e = expected.next().unwrap();
+                assert_eq!(t, *e);
+            }
+        }
+
+        #[test]
+        fn basic_source_code() {
+            let source = r#"
+let ten = 10;
+let add = fn(x, y) {
+    x + y;
+}
+            "#;
+            let source = String::from(source);
+
+            let expected = [
+                Token::Let,
+                Token::Ident("ten".to_string()),
+                Token::Assign,
+                Token::Int(1),
+                Token::Int(0),
+                Token::Semicolon,
+                Token::Let,
+                Token::Ident("add".to_string()),
+                Token::Assign,
+                Token::Function,
+                Token::LParen,
+                Token::Ident("x".to_string()),
+                Token::Comma,
+                Token::Ident("y".to_string()),
+                Token::RParen,
+                Token::LBrace,
+                Token::Ident("x".to_string()),
+                Token::Plus,
+                Token::Ident("y".to_string()),
+                Token::Semicolon,
+                Token::RBrace,
+            ];
+            let mut expected = expected.iter();
+
+            let mut lexer = Lexer::new(source);
+            while let Ok(t) = lexer.next_token() {
+                let e = expected.next().unwrap();
+                println!("L: {:?}\tR: {:?}", t, *e);
                 assert_eq!(t, *e);
             }
         }
