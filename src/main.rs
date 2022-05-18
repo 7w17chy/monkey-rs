@@ -156,12 +156,36 @@ pub mod lexer {
             Ok(result)
         }
 
+        /// parse integer from input sources
+        fn parse_integer(&mut self) -> io::Result<u32> {
+            let is_digit = |c: char| match c {
+                '0'..='9' => true,
+                _ => false,
+            };
+
+            let mut nums = Vec::with_capacity(10);
+            while is_digit(self.chr) {
+                nums.push(self.chr.to_digit(10).unwrap());
+                self.read_char()?;
+            }
+
+            // every digit gets multiplied by 10 raised by it's index and then added
+            // e.g. :
+            // [1, 2, 3] = [100, 20, 3] = 123
+            let res = nums
+                .iter()
+                .enumerate()
+                .map(|(i, v)| v * 10u32.pow(i as u32))
+                .sum::<u32>();
+
+            Ok(res)
+        }
+
         pub fn next_token(&mut self) -> io::Result<Token> {
             self.skip_whitespace()?;
             let res = match self.chr {
                 '0'..='9' => {
-                    // safe to use unwrap
-                    let num = self.chr.to_digit(10).unwrap();
+                    let num = self.parse_integer()?;
                     Ok(Token::Int(num))
                 },
                 '\0' => Ok(Token::EOF),
@@ -236,8 +260,7 @@ let add = fn(x, y) {
                 Token::Let,
                 Token::Ident("ten".to_string()),
                 Token::Assign,
-                Token::Int(1),
-                Token::Int(0),
+                Token::Int(10),
                 Token::Semicolon,
                 Token::Let,
                 Token::Ident("add".to_string()),
