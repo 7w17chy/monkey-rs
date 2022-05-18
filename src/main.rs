@@ -54,6 +54,8 @@ pub mod token {
         LessThan, // <
         MoreThan, // >
         Bang, // !
+        DoesntEqual, // !=
+        Equals, // ==
 
         // parenthesis
         LParen, // (
@@ -124,6 +126,15 @@ pub mod lexer {
                 "true" => Some(Token::Boolean(true)),
                 "false" => Some(Token::Boolean(false)),
                 _ => None,
+            }
+        }
+
+        fn peek(&mut self) -> io::Result<char> {
+            if self.read_position >= self.input.len() {
+                io::Result::Err(io::Error::new(io::ErrorKind::Other,
+                                String::from("Would reach beyound the end of the input!")))
+            } else {
+                Ok(self.input[self.read_position])
             }
         }
 
@@ -215,7 +226,12 @@ pub mod lexer {
                 ']' => Ok(Token::RBracket),
 
                 // operators
-                '=' => Ok(Token::Assign),
+                '=' => match self.peek() {
+                    Ok('!') => Ok(Token::DoesntEqual),
+                    Ok('=') => Ok(Token::Equals),
+                    _       => Ok(Token::Assign),
+                },
+
                 '+' => Ok(Token::Plus),
                 '-' => Ok(Token::Minus),
                 ',' => Ok(Token::Comma),

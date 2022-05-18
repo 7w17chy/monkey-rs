@@ -94,4 +94,28 @@ if henlo else world return universe
             assert_eq!(t, *e);
         }
     }
+
+    #[test]
+    fn two_symbol_operators() {
+        let source = String::from(r#"
+let is_equal = 10 == 12;
+        "#);
+        let expected = [
+            Token::Let,
+            Token::Ident(String::from("is_equal")),
+            Token::Assign,
+            Token::Int(10),
+            Token::Equals,
+            Token::Int(12),
+            Token::Semicolon,
+        ];
+        let mut expected = expected.iter();
+
+        let mut lexer = Lexer::new(source);
+        while let Ok(t) = lexer.next_token() {
+            let e = expected.next().unwrap();
+            println!("L: {:?}\tR: {:?}", t, *e);
+            assert_eq!(t, *e);
+        }
+    }
 }
