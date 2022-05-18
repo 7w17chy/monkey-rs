@@ -99,7 +99,7 @@ pub mod lexer {
         }
 
         // TODO: error handling -> only setting chr=0 isn't enough
-        pub fn read_char(&mut self) -> io::Result<()> {
+        fn read_char(&mut self) -> io::Result<()> {
             if self.read_position >= self.input.len() {
                 // We've reached the end of the input source
                 self.chr = 0 as char;
@@ -114,7 +114,7 @@ pub mod lexer {
             Ok(())
         }
 
-        pub fn determine_keyword(input: &str) -> Option<Token> {
+        fn determine_keyword(input: &str) -> Option<Token> {
             match input {
                 "fn" => Some(Token::Function),
                 "let" => Some(Token::Let),
@@ -149,7 +149,7 @@ pub mod lexer {
             Ok(())
         }
 
-        pub fn parse_identifier(&mut self) -> io::Result<String> {
+        fn parse_identifier(&mut self) -> io::Result<String> {
             self.skip_whitespace()?;
             let start = self.position;
 
