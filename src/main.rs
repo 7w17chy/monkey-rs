@@ -1,7 +1,8 @@
 use lexer::Lexer;
 
+pub mod tests;
+
 fn main() {
-    /*
     let input = String::from("{}[,;.]");
     let mut lexer = Lexer::new(input);
     while let Ok(c) = lexer.next_token() {
@@ -12,7 +13,7 @@ fn main() {
     let mut lexer2 = Lexer::new(input2);
     while let Ok(c) = lexer2.next_token() {
         println!("c: {:?}", c);
-    }*/
+    }
 
     let input3 = String::from(r#"
         ]\t"#);
@@ -33,17 +34,28 @@ pub mod token {
         Ident(String),
         Function,
         Let,
+        If,
+        Else,
+        Return,
 
         // literal values
         Int(u32),
+        Boolean(bool),
 
         // operators/special characters
         Assign,
         Plus,
         Minus,
         Comma,
+        Div, // /
+        Mul, // *
         Dot,
         Semicolon,
+        LessThan, // <
+        MoreThan, // >
+        Bang, // !
+
+        // parenthesis
         LParen, // (
         RParen, // )
         LBrace, // {
@@ -106,7 +118,12 @@ pub mod lexer {
             match input {
                 "fn" => Some(Token::Function),
                 "let" => Some(Token::Let),
-                _ => None
+                "if" => Some(Token::If),
+                "else" => Some(Token::Else),
+                "return" => Some(Token::Return),
+                "true" => Some(Token::Boolean(true)),
+                "false" => Some(Token::Boolean(false)),
+                _ => None,
             }
         }
 
@@ -218,74 +235,6 @@ pub mod lexer {
             };
             self.read_char()?;
             res
-        }
-    }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-
-        #[test]
-        fn basic_operators() {
-            let source = String::from("{],.;=+");
-            let expected = [
-                Token::LBrace,
-                Token::RBracket,
-                Token::Comma,
-                Token::Dot,
-                Token::Semicolon,
-                Token::Assign,
-                Token::Plus
-            ];
-            let mut expected = expected.iter();
-
-            let mut lexer = Lexer::new(source);
-            while let Ok(t) = lexer.next_token() {
-                let e = expected.next().unwrap();
-                assert_eq!(t, *e);
-            }
-        }
-
-        #[test]
-        fn basic_source_code() {
-            let source = r#"
-let ten = 10;
-let add = fn(x, y) {
-    x + y;
-}
-            "#;
-            let source = String::from(source);
-
-            let expected = [
-                Token::Let,
-                Token::Ident("ten".to_string()),
-                Token::Assign,
-                Token::Int(10),
-                Token::Semicolon,
-                Token::Let,
-                Token::Ident("add".to_string()),
-                Token::Assign,
-                Token::Function,
-                Token::LParen,
-                Token::Ident("x".to_string()),
-                Token::Comma,
-                Token::Ident("y".to_string()),
-                Token::RParen,
-                Token::LBrace,
-                Token::Ident("x".to_string()),
-                Token::Plus,
-                Token::Ident("y".to_string()),
-                Token::Semicolon,
-                Token::RBrace,
-            ];
-            let mut expected = expected.iter();
-
-            let mut lexer = Lexer::new(source);
-            while let Ok(t) = lexer.next_token() {
-                let e = expected.next().unwrap();
-                println!("L: {:?}\tR: {:?}", t, *e);
-                assert_eq!(t, *e);
-            }
         }
     }
 }
