@@ -162,10 +162,12 @@ impl Lexer {
         // every digit gets multiplied by 10 raised by it's index and then added
         // e.g. :
         // [1, 2, 3] = [100, 20, 3] = 123
+        // for this trick to work, we need to also reverse the numbers:
+        nums.reverse();
         let res = nums
             .iter()
             .enumerate()
-            .map(|(i, v)| v * 10u32.pow((i+1) as u32))
+            .map(|(i, v)| v * 10u32.pow(i as u32))
             .sum::<u32>();
 
         Some(res)
