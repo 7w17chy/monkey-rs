@@ -89,7 +89,6 @@ let ten = 10;
 let add = fn(x, y) {
     x + y;
 }
-!-/*100<
         "#;
         let source = String::from(source);
 
@@ -114,12 +113,6 @@ let add = fn(x, y) {
             Token::Ident("y".to_string()),
             Token::Semicolon,
             Token::RBrace,
-            Token::Bang,
-            Token::Minus,
-            Token::Div,
-            Token::Mul,
-            Token::Int(100),
-            Token::LessThan,
             Token::EOF,
         ];
         let mut expected = expected.iter();
