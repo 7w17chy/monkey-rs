@@ -126,7 +126,7 @@ impl Lexer {
             .iter()
             .collect::<String>();
 
-        if (i - start) == 0 {
+        if ((i+1) - start) == 0 {
             // empty identifier
             None
         } else {
@@ -134,22 +134,28 @@ impl Lexer {
         }
     }
 
-    /// parse integer from input sources
-    fn parse_integer(&mut self) -> Option<u32> {
-        let is_digit = |c: char| match c {
+    #[inline]
+    fn is_digit(c: char) -> bool {
+        match c {
             '0'..='9' => true,
             _ => false,
-        };
+        }
+    }
 
+    /// parse integer from input sources
+    fn parse_integer(&mut self) -> Option<u32> {
         let mut nums = Vec::with_capacity(10);
         eprintln!("reading integer starting at: input[{}] = '{}'", 
             self.position, self.input[self.position]);
+
         while let Some(chr) = self.peek() {
-            if !is_digit(chr) {
+            eprintln!("input[{}] = '{}'", self.position, self.input[self.position]);
+            // we know for sure that `self.chr` is a number, even at the first function
+            // call; next_token already figured out that `self.chr` is a digit
+            nums.push(self.chr.to_digit(10).unwrap());
+            if !Self::is_digit(chr) {
                 break;
             }
-            eprintln!("input[{}] = '{}'", self.position, self.input[self.position]);
-            nums.push(self.chr.to_digit(10).unwrap());
             self.advance()?;
         }
 

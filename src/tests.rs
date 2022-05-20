@@ -3,6 +3,33 @@ mod lexer_tests {
     use crate::{token::Token, lexer::Lexer};
 
     #[test]
+    fn single_character_identifiers() {
+        let source = String::from(r#"
+let y = f(x);
+        "#);
+        let expected = [
+            Token::Let,
+            Token::Ident("y".to_string()),
+            Token::Assign,
+            Token::Ident("f".to_string()),
+            Token::LParen,
+            Token::Ident("x".to_string()),
+            Token::RParen,
+            Token::Semicolon,
+            Token::EOF,
+        ];
+        let mut expected = expected.iter();
+
+        let lexer = Lexer::new(source);
+        for t in lexer {
+            eprintln!("t = {:?}", t);
+            let e = expected.next().unwrap();
+            eprintln!("L: {:?}\tR:{:?}", t, *e);
+            assert_eq!(t, *e);
+        }
+    }
+
+    #[test]
     fn operator_after() {
         let source = String::from("henlo! ==!= 10; 10= 10== 10!=");
         let expected = [
