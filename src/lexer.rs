@@ -1,5 +1,7 @@
 use crate::token::Token;
 
+use std::iter::Iterator;
+
 /// Lexer that excepts UTF-8 encoded source code (for simplicity).
 pub struct Lexer {
     /// input source code
@@ -12,6 +14,13 @@ pub struct Lexer {
     chr: char
 }
 
+impl Iterator for Lexer {
+    type Item = Token;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next_token()
+    }
+}
+
 impl Lexer {
     pub fn new(source: String) -> Self {
         let source = source
@@ -22,10 +31,10 @@ impl Lexer {
         let mut slf = Self { 
             input,
             position: 0,
-            read_position: 0, 
-            chr: 0 as char
+            read_position: 1, 
+            chr: 0 as char,
         };
-        slf.advance().expect("Invalid input/unexpected EOF");
+        slf.chr = slf.input[slf.position];
         slf
     }
 
@@ -36,10 +45,13 @@ impl Lexer {
 
         if self.position >= self.input.len() {
             // we've reached the end of the input string
+            eprintln!("advance: reached end of the input string");
             self.chr = '\0';
             None
         } else {
             self.chr = self.input[self.position];
+            eprintln!("advance: advancing to input[{}] = '{}'", 
+                self.position, self.chr);
             Some(())
         }
     }
@@ -76,12 +88,14 @@ impl Lexer {
         }
     }
 
+    #[inline]
     fn is_ascii_whitespace(chr: char) -> bool {
         chr == '\t' || chr == ' ' || chr == '\n'
     }
 
     fn skip_whitespace(&mut self) {
         while Self::is_ascii_whitespace(self.chr) {
+            eprintln!("skipping whitespace at input[{}]", self.position);
             // we've reached the end of the input string
             if let None = self.advance() {
                 break;
@@ -93,24 +107,26 @@ impl Lexer {
     /// (seperation between the two is done in another, seperate step).
     fn parse_identifier(&mut self) -> Option<String> {
         self.skip_whitespace();
-        let start = self.position;
 
+        let start = self.position;
         let mut i = start;
-        while i < self.input.len() {
-            eprintln!("input[{}] = '{}'", i, self.input[i]);
-            if !Self::is_valid(self.input[i]) || Self::is_ascii_whitespace(self.input[i]) {
-                eprintln!("breaking: input[{}] = '{}'", i, self.input[i]);
+
+        while let Some(chr) = self.peek() {
+            //eprintln!("parse_identifier: input[{}] = '{}'", i, self.input[i]);
+            if !Self::is_valid(chr) || Self::is_ascii_whitespace(chr) {
+                eprintln!("parse_identifier: breaking: input[{}] = '{}'", i, self.input[i]);
                 break;
             }
             self.advance()?;
             i += 1;
         }
 
-        let result = self.input[start..self.position]
+        // NOTE: i+1: upper slice bound is exclusive!
+        let result = self.input[start..i+1]
             .iter()
             .collect::<String>();
 
-        if (self.position - start) == 0 {
+        if (i - start) == 0 {
             // empty identifier
             None
         } else {
@@ -126,9 +142,12 @@ impl Lexer {
         };
 
         let mut nums = Vec::with_capacity(10);
-        eprintln!("reading integer starting at: input[{}] = {}", 
+        eprintln!("reading integer starting at: input[{}] = '{}'", 
             self.position, self.input[self.position]);
-        while is_digit(self.chr) {
+        while let Some(chr) = self.peek() {
+            if !is_digit(chr) {
+                break;
+            }
             eprintln!("input[{}] = '{}'", self.position, self.input[self.position]);
             nums.push(self.chr.to_digit(10).unwrap());
             self.advance()?;
@@ -156,12 +175,15 @@ impl Lexer {
             self.position = self.input.len();
             self.read_position = self.position + 1;
             self.chr = '\0';
+            eprintln!("skip_chars: skipped until the end of the input string");
             amount_skipped
         } else {
             // update fields accordingly
             self.position = self.position + amount;
             self.read_position = self.position + 1;
             self.chr = self.input[self.position];
+            eprintln!("skip_chars: skipped {} chars, input[{}] = '{}'",
+                amount, self.position, self.chr);
             amount
         }
     }

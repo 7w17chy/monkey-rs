@@ -22,8 +22,8 @@ let is_equal = 10;;
     ];
     let mut expected = expected.iter();
 
-    let mut lexer = Lexer::new(source);
-    while let Some(t) = lexer.next_token() {
+    let lexer = Lexer::new(source);
+    for t in lexer {
         let e = expected.next().unwrap();
         eprintln!("L: {:?}\tR: {:?}", t, *e);
         assert_eq!(t, *e);

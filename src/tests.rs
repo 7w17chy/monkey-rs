@@ -22,8 +22,8 @@ mod lexer_tests {
         ];
         let mut expected = expected.iter();
 
-        let mut lexer = Lexer::new(source);
-        while let Some(t) = lexer.next_token() {
+        let lexer = Lexer::new(source);
+        for t in lexer {
             eprintln!("t = {:?}", t);
             let e = expected.next().unwrap();
             eprintln!("L: {:?}\tR:{:?}", t, *e);
@@ -46,8 +46,8 @@ mod lexer_tests {
         ];
         let mut expected = expected.iter();
 
-        let mut lexer = Lexer::new(source);
-        while let Some(t) = lexer.next_token() {
+        let lexer = Lexer::new(source);
+        for t in lexer {
             eprintln!("t = {:?}", t);
             let e = expected.next().unwrap();
             eprintln!("L: {:?}\tR:{:?}", t, *e);
@@ -97,8 +97,8 @@ let add = fn(x, y) {
         ];
         let mut expected = expected.iter();
 
-        let mut lexer = Lexer::new(source);
-        while let Some(t) = lexer.next_token() {
+        let lexer = Lexer::new(source);
+        for t in lexer {
             let e = expected.next().unwrap();
             eprintln!("L: {:?}\tR: {:?}", t, *e);
             assert_eq!(t, *e);
@@ -121,8 +121,8 @@ if henlo else world return universe
         ];
         let mut expected = expected.iter();
 
-        let mut lexer = Lexer::new(source);
-        while let Some(t) = lexer.next_token() {
+        let lexer = Lexer::new(source);
+        for t in lexer {
             let e = expected.next().unwrap();
             eprintln!("L: {:?}\tR: {:?}", t, *e);
             assert_eq!(t, *e);
@@ -146,8 +146,8 @@ let is_equal = 10 == 12;
         ];
         let mut expected = expected.iter();
 
-        let mut lexer = Lexer::new(source);
-        while let Some(t) = lexer.next_token() {
+        let lexer = Lexer::new(source);
+        for t in lexer {
             let e = expected.next().unwrap();
             eprintln!("L: {:?}\tR: {:?}", t, *e);
             assert_eq!(t, *e);
@@ -160,8 +160,8 @@ let is_equal = 10 == 12;
         let expected = vec![Token::Equals, Token::DoesntEqual, Token::EOF];
         let mut expected = expected.iter();
 
-        let mut lexer = Lexer::new(source);
-        while let Some(t) = lexer.next_token() {
+        let lexer = Lexer::new(source);
+        for t in lexer {
             let e = expected.next().unwrap();
             eprintln!("L: {:?}\tR: {:?}", t, *e);
             assert_eq!(t, *e);
