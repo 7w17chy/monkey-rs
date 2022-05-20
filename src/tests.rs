@@ -3,6 +3,35 @@ mod lexer_tests {
     use crate::{token::Token, lexer::Lexer};
 
     #[test]
+    fn operator_after() {
+        let source = String::from("henlo! ==!= 10; 10= 10== 10!=");
+        let expected = [
+            Token::Ident("henlo".to_string()),
+            Token::Bang,
+            Token::Equals,
+            Token::DoesntEqual,
+            Token::Int(10),
+            Token::Semicolon,
+            Token::Int(10),
+            Token::Assign,
+            Token::Int(10),
+            Token::Equals,
+            Token::Int(10),
+            Token::DoesntEqual,
+            Token::EOF,
+        ];
+        let mut expected = expected.iter();
+
+        let mut lexer = Lexer::new(source);
+        while let Some(t) = lexer.next_token() {
+            eprintln!("t = {:?}", t);
+            let e = expected.next().unwrap();
+            eprintln!("L: {:?}\tR:{:?}", t, *e);
+            assert_eq!(t, *e);
+        }
+    }
+
+    #[test]
     fn basic_operators() {
         let source = String::from("{],.;=+");
         let expected = [
@@ -12,13 +41,16 @@ mod lexer_tests {
             Token::Dot,
             Token::Semicolon,
             Token::Assign,
-            Token::Plus
+            Token::Plus,
+            Token::EOF
         ];
         let mut expected = expected.iter();
 
         let mut lexer = Lexer::new(source);
-        while let Ok(t) = lexer.next_token() {
+        while let Some(t) = lexer.next_token() {
+            eprintln!("t = {:?}", t);
             let e = expected.next().unwrap();
+            eprintln!("L: {:?}\tR:{:?}", t, *e);
             assert_eq!(t, *e);
         }
     }
@@ -28,7 +60,7 @@ mod lexer_tests {
         let source = r#"
 let ten = 10;
 let add = fn(x, y) {
-x + y;
+    x + y;
 }
 !-/*100<
         "#;
@@ -61,13 +93,14 @@ x + y;
             Token::Mul,
             Token::Int(100),
             Token::LessThan,
+            Token::EOF,
         ];
         let mut expected = expected.iter();
 
         let mut lexer = Lexer::new(source);
-        while let Ok(t) = lexer.next_token() {
+        while let Some(t) = lexer.next_token() {
             let e = expected.next().unwrap();
-            println!("L: {:?}\tR: {:?}", t, *e);
+            eprintln!("L: {:?}\tR: {:?}", t, *e);
             assert_eq!(t, *e);
         }
     }
@@ -84,13 +117,14 @@ if henlo else world return universe
             Token::Ident(String::from("world")),
             Token::Return,
             Token::Ident(String::from("universe")),
+            Token::EOF,
         ];
         let mut expected = expected.iter();
 
         let mut lexer = Lexer::new(source);
-        while let Ok(t) = lexer.next_token() {
+        while let Some(t) = lexer.next_token() {
             let e = expected.next().unwrap();
-            println!("L: {:?}\tR: {:?}", t, *e);
+            eprintln!("L: {:?}\tR: {:?}", t, *e);
             assert_eq!(t, *e);
         }
     }
@@ -108,14 +142,30 @@ let is_equal = 10 == 12;
             Token::Equals,
             Token::Int(12),
             Token::Semicolon,
+            Token::EOF,
         ];
         let mut expected = expected.iter();
 
         let mut lexer = Lexer::new(source);
-        while let Ok(t) = lexer.next_token() {
+        while let Some(t) = lexer.next_token() {
             let e = expected.next().unwrap();
-            println!("L: {:?}\tR: {:?}", t, *e);
+            eprintln!("L: {:?}\tR: {:?}", t, *e);
             assert_eq!(t, *e);
         }
+    }
+
+    #[test]
+    fn two_symbol_operators2() {
+        let source = String::from("== !=");
+        let expected = vec![Token::Equals, Token::DoesntEqual, Token::EOF];
+        let mut expected = expected.iter();
+
+        let mut lexer = Lexer::new(source);
+        while let Some(t) = lexer.next_token() {
+            let e = expected.next().unwrap();
+            eprintln!("L: {:?}\tR: {:?}", t, *e);
+            assert_eq!(t, *e);
+        }
+
     }
 }

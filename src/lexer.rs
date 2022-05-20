@@ -1,4 +1,3 @@
-use std::io;
 use crate::token::Token;
 
 /// Lexer that excepts UTF-8 encoded source code (for simplicity).
@@ -26,23 +25,23 @@ impl Lexer {
             read_position: 0, 
             chr: 0 as char
         };
-        slf.read_char().expect("Invalid input/unexpected EOF");
+        slf.advance().expect("Invalid input/unexpected EOF");
         slf
     }
 
-    fn read_char(&mut self) -> io::Result<()> {
-        if self.read_position >= self.input.len() {
-            // We've reached the end of the input source
-            self.chr = 0 as char;
-            return io::Result::Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    "Reached end of input string!"));
-        }
-        self.chr = self.input[self.read_position];
+    /// Advance the `pointers` further into the input string. 
+    fn advance(&mut self) -> Option<()> {
         self.position = self.read_position;
         self.read_position += 1;
 
-        Ok(())
+        if self.position >= self.input.len() {
+            // we've reached the end of the input string
+            self.chr = '\0';
+            None
+        } else {
+            self.chr = self.input[self.position];
+            Some(())
+        }
     }
 
     fn determine_keyword(input: &str) -> Option<Token> {
@@ -58,12 +57,11 @@ impl Lexer {
         }
     }
 
-    fn peek(&mut self) -> io::Result<char> {
+    fn peek(&mut self) -> Option<char> {
         if self.read_position >= self.input.len() {
-            io::Result::Err(io::Error::new(io::ErrorKind::Other,
-                            String::from("Would reach beyound the end of the input!")))
+            None
         } else {
-            Ok(self.input[self.read_position])
+            Some(self.input[self.read_position])
         }
     }
 
@@ -82,23 +80,29 @@ impl Lexer {
         chr == '\t' || chr == ' ' || chr == '\n'
     }
 
-    fn skip_whitespace(&mut self) -> io::Result<()> {
+    fn skip_whitespace(&mut self) {
         while Self::is_ascii_whitespace(self.chr) {
-            self.read_char()?;
-        }
-        Ok(())
-    }
-
-    fn parse_identifier(&mut self) -> io::Result<String> {
-        self.skip_whitespace()?;
-        let start = self.position;
-
-        let mut i = 0;
-        while i < self.input.len() {
-            if !Self::is_valid(self.input[i]) || Self::is_ascii_whitespace(self.input[i]) {
+            // we've reached the end of the input string
+            if let None = self.advance() {
                 break;
             }
-            self.read_char()?;
+        }
+    }
+
+    /// Parse an identifier which may be an identfier in the sense of a name or keyword
+    /// (seperation between the two is done in another, seperate step).
+    fn parse_identifier(&mut self) -> Option<String> {
+        self.skip_whitespace();
+        let start = self.position;
+
+        let mut i = start;
+        while i < self.input.len() {
+            eprintln!("input[{}] = '{}'", i, self.input[i]);
+            if !Self::is_valid(self.input[i]) || Self::is_ascii_whitespace(self.input[i]) {
+                eprintln!("breaking: input[{}] = '{}'", i, self.input[i]);
+                break;
+            }
+            self.advance()?;
             i += 1;
         }
 
@@ -107,23 +111,27 @@ impl Lexer {
             .collect::<String>();
 
         if (self.position - start) == 0 {
-            return io::Result::Err(io::Error::new(io::ErrorKind::Other,
-                                   String::from("Empty identifier")));
+            // empty identifier
+            None
+        } else {
+            Some(result)
         }
-        Ok(result)
     }
 
     /// parse integer from input sources
-    fn parse_integer(&mut self) -> io::Result<u32> {
+    fn parse_integer(&mut self) -> Option<u32> {
         let is_digit = |c: char| match c {
             '0'..='9' => true,
             _ => false,
         };
 
         let mut nums = Vec::with_capacity(10);
+        eprintln!("reading integer starting at: input[{}] = {}", 
+            self.position, self.input[self.position]);
         while is_digit(self.chr) {
+            eprintln!("input[{}] = '{}'", self.position, self.input[self.position]);
             nums.push(self.chr.to_digit(10).unwrap());
-            self.read_char()?;
+            self.advance()?;
         }
 
         // every digit gets multiplied by 10 raised by it's index and then added
@@ -132,73 +140,95 @@ impl Lexer {
         let res = nums
             .iter()
             .enumerate()
-            .map(|(i, v)| v * 10u32.pow(i as u32))
+            .map(|(i, v)| v * 10u32.pow((i+1) as u32))
             .sum::<u32>();
 
-        Ok(res)
+        Some(res)
     }
 
-    pub fn skip_chars(&mut self, amount: usize) -> io::Result<()> {
+    /// Advance by `amount` characters into the input string and return the amount skipped.
+    pub fn skip_chars(&mut self, amount: usize) -> usize {
         if (self.position + amount) > self.input.len() {
-            return io::Result::Err(io::Error::new(io::ErrorKind::Other,
-                                   String::from(
-                                       format!(
-                                           "Skipping {} chars would exceed the length of the input!",
-                                           amount
-                                        )
-                                   )));
-
+            let amount_skipped = self.input.len() - self.position;
+            // skip until the end of the input string.
+            // The caller can find out if the end has been reached when they compare the
+            // input and output numbers (the diff should =0)
+            self.position = self.input.len();
+            self.read_position = self.position + 1;
+            self.chr = '\0';
+            amount_skipped
+        } else {
+            // update fields accordingly
+            self.position = self.position + amount;
+            self.read_position = self.position + 1;
+            self.chr = self.input[self.position];
+            amount
         }
-        Ok(())
     }
 
-    pub fn next_token(&mut self) -> io::Result<Token> {
-        self.skip_whitespace()?;
+    pub fn next_token(&mut self) -> Option<Token> {
+        self.skip_whitespace();
         let res = match self.chr {
-            '0'..='9' => {
-                let num = self.parse_integer()?;
-                Ok(Token::Int(num))
-            },
-            '\0' => Ok(Token::EOF),
+            '0'..='9' => self.parse_integer().map(Token::Int),
+            '\0' => None,
             // parenthesis
-            '(' => Ok(Token::LParen),
-            ')' => Ok(Token::RParen),
-            '{' => Ok(Token::LBrace),
-            '}' => Ok(Token::RBrace),
-            '[' => Ok(Token::LBracket),
-            ']' => Ok(Token::RBracket),
+            '(' => Some(Token::LParen),
+            ')' => Some(Token::RParen),
+            '{' => Some(Token::LBrace),
+            '}' => Some(Token::RBrace),
+            '[' => Some(Token::LBracket),
+            ']' => Some(Token::RBracket),
 
             // operators
             '=' => match self.peek() {
-                Ok('!') => {
-                    self.skip_chars(2)?;
-                    Ok(Token::DoesntEqual)
+                Some('=') => {
+                    // doesn't matter if we skip to the end
+                    _ = self.skip_chars(1);
+                    if self.chr == '=' {
+                        eprintln!("didn't skip enough characters!");
+                    }
+                    Some(Token::Equals)
                 },
-                Ok('=') => {
-                    self.skip_chars(2)?;
-                    Ok(Token::Equals)
+                _ => Some(Token::Assign),
+            },
+            '!' => match self.peek() {
+                Some('=') => {
+                    // doesn't matter if we skip to the end
+                    _ = self.skip_chars(1);
+                    if self.chr == '=' {
+                        eprintln!("didn't skip enough characters!");
+                    }
+                    Some(Token::DoesntEqual)
                 },
-                _       => Ok(Token::Assign),
+                _ => Some(Token::Bang),
             },
 
-            '+' => Ok(Token::Plus),
-            '-' => Ok(Token::Minus),
-            ',' => Ok(Token::Comma),
-            ';' => Ok(Token::Semicolon),
-            '.' => Ok(Token::Dot),
+            '+' => Some(Token::Plus),
+            '-' => Some(Token::Minus),
+            ',' => Some(Token::Comma),
+            ';' => Some(Token::Semicolon),
+            '.' => Some(Token::Dot),
 
             // identifiers/keywords
             _   => {
-                let ident = self.parse_identifier()?;
+                eprintln!("trying to read identifier beginning with: '{}'", self.chr);
+                let ident = match self.parse_identifier() {
+                    Some(i) => i,
+                    None => {
+                        eprintln!("called parse_identifier on an invalid input");
+                        panic!("neither operator, keyword or valid token");
+                    }
+                };
+
                 // check if the string found is a keyword or should be treated as identifier
-                if let Some(kw) = Self::determine_keyword(&ident[..]) {
-                    Ok(kw)
-                } else {
-                    Ok(Token::Ident(ident))
+                match Self::determine_keyword(&ident[..]) {
+                    Some(kw) => Some(kw),
+                    None => Some(Token::Ident(ident)),
                 }
             }
         };
-        self.read_char()?;
+        // return value is handled when `next_token` is called again
+        _ = self.advance();
         res
     }
 }
